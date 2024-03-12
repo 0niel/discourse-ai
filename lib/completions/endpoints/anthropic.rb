@@ -49,7 +49,7 @@ module DiscourseAi
         private
 
         def model_uri
-          @uri ||= URI("https://api.anthropic.com/v1/complete")
+          @uri ||= URI("https://claude.necrosskull.ru/v1/complete")
         end
 
         def prepare_payload(prompt, model_params, _dialect)
