@@ -99,6 +99,7 @@ body {
 }
 
 .ai-logo .logo {
+  display: none;
   height: 3.75em;
   width: auto;
   padding: 0.5em 0;
