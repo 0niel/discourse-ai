@@ -53,7 +53,7 @@ module DiscourseAi
 
         def model_uri
           url =
-            "https://generativelanguage.googleapis.com/v1beta/models/#{model}:#{@streaming_mode ? "streamGenerateContent" : "generateContent"}?key=#{SiteSetting.ai_gemini_api_key}"
+            "https://gemini.necrosskull.ru/v1beta/models/#{model}:#{@streaming_mode ? "streamGenerateContent" : "generateContent"}?key=#{SiteSetting.ai_gemini_api_key}"
 
           URI(url)
         end
