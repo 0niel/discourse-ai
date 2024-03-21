@@ -39,7 +39,7 @@ module DiscourseAi
         title_prompt.push(
           type: :user,
           content:
-            "Based on our previous conversation, suggest a 7 word title without quoting any of it.",
+            "Основываясь на нашем предыдущем разговоре, предложи название для переписки из 7 слов, не цитируя что-либо.",
         )
 
         DiscourseAi::Completions::Llm
