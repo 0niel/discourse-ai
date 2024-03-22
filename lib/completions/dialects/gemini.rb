@@ -97,7 +97,7 @@ module DiscourseAi
         end
 
         def max_prompt_tokens
-          16_384 # 50% of model tokens
+          524_288 # 50% of model tokens
         end
 
         protected
