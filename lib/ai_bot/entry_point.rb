@@ -16,6 +16,7 @@ module DiscourseAi
       FAKE_ID = -116 # only used for dev and test
       CLAUDE_3_OPUS_ID = -117
       CLAUDE_3_SONNET_ID = -118
+      CLAUDE_3_HAIKU_ID = -119
 
       BOTS = [
         [GPT4_ID, "gpt4_bot", "gpt-4"],
@@ -27,6 +28,7 @@ module DiscourseAi
         [FAKE_ID, "fake_bot", "fake"],
         [CLAUDE_3_OPUS_ID, "claude_3_opus_bot", "claude-3-opus"],
         [CLAUDE_3_SONNET_ID, "claude_3_sonnet_bot", "claude-3-sonnet"],
+        [CLAUDE_3_HAIKU_ID, "claude_3_haiku_bot", "claude-3-haiku"],
       ]
 
       BOT_USER_IDS = BOTS.map(&:first)
@@ -63,6 +65,8 @@ module DiscourseAi
           CLAUDE_3_OPUS_ID
         in "claude-3-sonnet"
           CLAUDE_3_SONNET_ID
+        in "claude-3-haiku"
+          CLAUDE_3_HAIKU_ID
         else
           nil
         end
@@ -199,6 +203,17 @@ module DiscourseAi
 
         if plugin.respond_to?(:register_editable_topic_custom_field)
           plugin.register_editable_topic_custom_field(:ai_persona_id)
+        end
+
+        plugin.on(:site_setting_changed) do |name, old_value, new_value|
+          if name == "ai_embeddings_model" && SiteSetting.ai_embeddings_enabled? &&
+               new_value != old_value
+            RagDocumentFragment.find_in_batches do |batch|
+              batch.each_slice(100) do |fragments|
+                Jobs.enqueue(:generate_rag_embeddings, fragment_ids: fragments.map(&:id))
+              end
+            end
+          end
         end
       end
     end
