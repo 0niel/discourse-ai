@@ -8,9 +8,8 @@
 # url: https://meta.discourse.org/t/discourse-ai/259214
 # required_version: 2.7.0
 
-gem "tokenizers", "0.4.3"
+gem "tokenizers", "0.4.4"
 gem "tiktoken_ruby", "0.0.7"
-gem "baran", "0.1.10"
 
 enabled_site_setting :discourse_ai_enabled
 
@@ -65,4 +64,8 @@ after_initialize do
   end
 
   reloadable_patch { |plugin| Guardian.prepend DiscourseAi::GuardianExtensions }
+
+  register_modifier(:post_should_secure_uploads?) do |_, _, topic|
+    false if topic.private_message? && SharedAiConversation.exists?(target: topic)
+  end
 end

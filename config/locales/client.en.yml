@@ -14,6 +14,11 @@ en:
         gemini_pro: Gemini Pro
         claude_3_opus: Claude 3 Opus
         claude_3_sonnet: Claude 3 Sonnet
+        claude_3_haiku: Claude 3 Haiku
+        mixtral_8x7b_instruct_v0_1: Mixtral 8x7B Instruct V0.1
+        mistral_7b_instruct_v0_2: Mistral 7B Instruct V0.2
+        command_r: Cohere Command R
+        command_r_plus: Cohere Command R+
       scriptables:
         llm_report:
           fields:
@@ -171,7 +176,9 @@ en:
           hint: "To control where the file's content gets placed within the system prompt, include the {uploads} placeholder in the system prompt above."
           button: "Add Files"
           filter: "Filter uploads"
-          complete: "Complete"
+          indexed: "Indexed"
+          indexing: "Indexing"
+          uploaded: "Ready to be indexed"
 
       related_topics:
         title: "Related Topics"
@@ -266,6 +273,7 @@ en:
           claude-3-opus: "Claude 3 Opus"
           claude-3-sonnet: "Claude 3 Sonnet"
           claude-3-haiku: "Claude 3 Haiku"
+          cohere-command-r-plus: "Cohere Command R Plus"
           gpt-4: "GPT-4"
           gpt-4-turbo: "GPT-4 Turbo"
           gpt-3:
