@@ -43,6 +43,7 @@ en:
     ai_openai_gpt35_url: "Custom URL used for GPT 3.5 chat completions. (for Azure support)"
     ai_openai_gpt35_16k_url: "Custom URL used for GPT 3.5 16k chat completions. (for Azure support)"
     ai_openai_gpt4_url: "Custom URL used for GPT 4 chat completions. (for Azure support)"
+    ai_openai_gpt4o_url: "Custom URL used for GPT 4 Omni chat completions. (for Azure support)"
     ai_openai_gpt4_32k_url: "Custom URL used for GPT 4 32k chat completions. (for Azure support)"
     ai_openai_gpt4_turbo_url: "Custom URL used for GPT 4 Turbo chat completions. (for Azure support)"
     ai_openai_dall_e_3_url: "Custom URL used for DALL-E 3 image generation. (for Azure support)"
@@ -96,6 +97,7 @@ en:
     ai_bot_enabled: "Enable the AI Bot module."
     ai_bot_enable_chat_warning: "Display a warning when PM chat is initiated. Can be overriden by editing the translation string: discourse_ai.ai_bot.pm_warning"
     ai_bot_allowed_groups: "When the GPT Bot has access to the PM, it will reply to members of these groups."
+    ai_bot_debugging_allowed_groups: "Allow these groups to see a debug button on posts which displays the raw AI request and response"
     ai_bot_public_sharing_allowed_groups: "Allow these groups to share AI personal messages with the public via a unique publicly available link"
     ai_bot_enabled_chat_bots: "Available models to act as an AI Bot"
     ai_bot_add_to_header: "Display a button in the header to start a PM with a AI Bot"
@@ -169,6 +171,7 @@ en:
         conversation_deleted: "Conversation share deleted successfully"
     ai_bot:
       personas:
+        default_llm_required: "Default LLM model is required prior to enabling Chat"
         cannot_delete_system_persona: "System personas cannot be deleted, please disable it instead"
         cannot_edit_system_persona: "System personas can only be renamed, you may not edit commands or system prompt, instead disable and make a copy"
         github_helper:
@@ -203,6 +206,9 @@ en:
       searching: "Searching for: '%{query}'"
       command_options:
         search:
+          search_private:
+            name: "Search Private"
+            description: "Include all topics user has access to in search results (by default only public topics are included)"
           max_results:
             name: "Maximum number of results"
             description: "Maximum number of results to include in the search - if empty default rules will be used and count will be scaled depending on model used. Highest value is 100."

@@ -7,7 +7,6 @@ module DiscourseAi
         return [] if input.blank?
 
         model = SiteSetting.ai_helper_illustrate_post_model
-        attribution = "discourse_ai.ai_helper.painter.attribution.#{model}"
 
         if model == "stable_diffusion_xl"
           stable_diffusion_prompt = diffusion_prompt(input, user)
@@ -69,6 +68,7 @@ module DiscourseAi
         DiscourseAi::Completions::Llm.proxy(SiteSetting.ai_helper_model).generate(
           prompt,
           user: user,
+          feature_name: "illustrate_post",
         )
       end
     end

@@ -5,12 +5,24 @@ module DiscourseAi
     module Personas
       class Persona
         class << self
+          def rag_conversation_chunks
+            10
+          end
+
           def vision_enabled
             false
           end
 
           def vision_max_pixels
             1_048_576
+          end
+
+          def question_consolidator_llm
+            nil
+          end
+
+          def allow_chat
+            false
           end
 
           def system_personas
@@ -121,7 +133,7 @@ module DiscourseAi
           self.class.all_available_tools.filter { |tool| tools.include?(tool) }
         end
 
-        def craft_prompt(context)
+        def craft_prompt(context, llm: nil)
           system_insts =
             system_prompt.gsub(/\{(\w+)\}/) do |match|
               found = context[match[1..-2].to_sym]
@@ -133,15 +145,20 @@ module DiscourseAi
           #{available_tools.map(&:custom_system_message).compact_blank.join("\n")}
           TEXT
 
-          fragments_guidance = rag_fragments_prompt(context[:conversation_context].to_a)&.strip
-
-          if fragments_guidance.present?
-            if system_insts.include?("{uploads}")
-              prompt_insts = prompt_insts.gsub("{uploads}", fragments_guidance)
-            else
-              prompt_insts << fragments_guidance
-            end
+          question_consolidator_llm = llm
+          if self.class.question_consolidator_llm.present?
+            question_consolidator_llm =
+              DiscourseAi::Completions::Llm.proxy(self.class.question_consolidator_llm)
           end
+
+          fragments_guidance =
+            rag_fragments_prompt(
+              context[:conversation_context].to_a,
+              llm: question_consolidator_llm,
+              user: context[:user],
+            )&.strip
+
+          prompt_insts << fragments_guidance if fragments_guidance.present?
 
           prompt =
             DiscourseAi::Completions::Prompt.new(
@@ -157,16 +174,21 @@ module DiscourseAi
           prompt
         end
 
-        def find_tools(partial)
+        def find_tools(partial, bot_user:, llm:, context:)
           return [] if !partial.include?("</invoke>")
 
           parsed_function = Nokogiri::HTML5.fragment(partial)
-          parsed_function.css("invoke").map { |fragment| find_tool(fragment) }.compact
+          parsed_function
+            .css("invoke")
+            .map do |fragment|
+              tool_instance(fragment, bot_user: bot_user, llm: llm, context: context)
+            end
+            .compact
         end
 
         protected
 
-        def find_tool(parsed_function)
+        def tool_instance(parsed_function, bot_user:, llm:, context:)
           function_id = parsed_function.at("tool_id")&.text
           function_name = parsed_function.at("tool_name")&.text
           return nil if function_name.nil?
@@ -184,8 +206,17 @@ module DiscourseAi
                 begin
                   JSON.parse(value)
                 rescue JSON::ParserError
-                  nil
+                  [value.to_s]
                 end
+            elsif param[:type] == "string" && value
+              value = strip_quotes(value).to_s
+            elsif param[:type] == "integer" && value
+              value = strip_quotes(value).to_i
+            end
+
+            if param[:enum] && value && !param[:enum].include?(value)
+              # invalid enum value
+              value = nil
             end
 
             arguments[name.to_sym] = value if value
@@ -195,10 +226,27 @@ module DiscourseAi
             arguments,
             tool_call_id: function_id || function_name,
             persona_options: options[tool_klass].to_h,
+            bot_user: bot_user,
+            llm: llm,
+            context: context,
           )
         end
 
-        def rag_fragments_prompt(conversation_context)
+        def strip_quotes(value)
+          if value.is_a?(String)
+            if value.start_with?('"') && value.end_with?('"')
+              value = value[1..-2]
+            elsif value.start_with?("'") && value.end_with?("'")
+              value = value[1..-2]
+            else
+              value
+            end
+          else
+            value
+          end
+        end
+
+        def rag_fragments_prompt(conversation_context, llm:, user:)
           upload_refs =
             UploadReference.where(target_id: id, target_type: "AiPersona").pluck(:upload_id)
 
@@ -206,24 +254,45 @@ module DiscourseAi
           return nil if conversation_context.blank? || upload_refs.blank?
 
           latest_interactions =
-            conversation_context
-              .select { |ctx| %i[model user].include?(ctx[:type]) }
-              .map { |ctx| ctx[:content] }
-              .last(10)
-              .join("\n")
+            conversation_context.select { |ctx| %i[model user].include?(ctx[:type]) }.last(10)
+
+          return nil if latest_interactions.empty?
+
+          # first response
+          if latest_interactions.length == 1
+            consolidated_question = latest_interactions[0][:content]
+          else
+            consolidated_question =
+              DiscourseAi::AiBot::QuestionConsolidator.consolidate_question(
+                llm,
+                latest_interactions,
+                user,
+              )
+          end
+
+          return nil if !consolidated_question
 
           strategy = DiscourseAi::Embeddings::Strategies::Truncation.new
           vector_rep =
             DiscourseAi::Embeddings::VectorRepresentations::Base.current_representation(strategy)
           reranker = DiscourseAi::Inference::HuggingFaceTextEmbeddings
 
-          interactions_vector = vector_rep.vector_from(latest_interactions)
+          interactions_vector = vector_rep.vector_from(consolidated_question)
+
+          rag_conversation_chunks = self.class.rag_conversation_chunks
 
           candidate_fragment_ids =
             vector_rep.asymmetric_rag_fragment_similarity_search(
               interactions_vector,
               persona_id: id,
-              limit: reranker.reranker_configured? ? 50 : 10,
+              limit:
+                (
+                  if reranker.reranker_configured?
+                    rag_conversation_chunks * 5
+                  else
+                    rag_conversation_chunks
+                  end
+                ),
               offset: 0,
             )
 
@@ -239,11 +308,11 @@ module DiscourseAi
               DiscourseAi::Inference::HuggingFaceTextEmbeddings
                 .rerank(conversation_context.last[:content], guidance)
                 .to_a
-                .take(10)
+                .take(rag_conversation_chunks)
                 .map { _1[:index] }
 
             if ranks.empty?
-              fragments = fragments.take(10)
+              fragments = fragments.take(rag_conversation_chunks)
             else
               fragments = ranks.map { |idx| fragments[idx] }
             end

@@ -98,6 +98,7 @@ discourse_ai:
 
   ai_openai_gpt35_url: "https://api.openai.com/v1/chat/completions"
   ai_openai_gpt35_16k_url: "https://api.openai.com/v1/chat/completions"
+  ai_openai_gpt4o_url: "https://api.openai.com/v1/chat/completions"
   ai_openai_gpt4_url: "https://api.openai.com/v1/chat/completions"
   ai_openai_gpt4_32k_url: "https://api.openai.com/v1/chat/completions"
   ai_openai_gpt4_turbo_url: "https://api.openai.com/v1/chat/completions"
@@ -122,6 +123,8 @@ discourse_ai:
     default: "stable-diffusion-xl-1024-v1-0"
     type: enum
     choices:
+      - "sd3"
+      - "sd3-turbo"
       - "stable-diffusion-xl-1024-v1-0"
       - "stable-diffusion-768-v2-1"
       - "stable-diffusion-v1-5"
@@ -183,6 +186,9 @@ discourse_ai:
   ai_strict_token_counting:
     default: false
     hidden: true
+  ai_ollama_endpoint:
+    hidden: true
+    default: ""
 
   composer_ai_helper_enabled:
     default: false
@@ -313,6 +319,11 @@ discourse_ai:
   ai_bot_enable_chat_warning:
     default: false
     client: true
+  ai_bot_debugging_allowed_groups:
+    type: group_list
+    list_type: compact
+    default: ""
+    allow_any: false
   ai_bot_allowed_groups:
     type: group_list
     list_type: compact
@@ -333,8 +344,9 @@ discourse_ai:
       - gpt-3.5-turbo
       - gpt-4
       - gpt-4-turbo
+      - gpt-4o
       - claude-2
-      - gemini-pro
+      - gemini-1.5-pro
       - mixtral-8x7B-Instruct-V0.1
       - claude-3-opus
       - claude-3-sonnet

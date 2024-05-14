@@ -5,17 +5,15 @@ module DiscourseAi
     module Endpoints
       class Cohere < Base
         class << self
-          def can_contact?(endpoint_name, model_name)
-            return false unless endpoint_name == "cohere"
-
-            %w[command-light command command-r command-r-plus].include?(model_name)
+          def can_contact?(endpoint_name)
+            endpoint_name == "cohere"
           end
 
           def dependant_setting_names
             %w[ai_cohere_api_key]
           end
 
-          def correctly_configured?(model_name)
+          def correctly_configured?(_model_name)
             SiteSetting.ai_cohere_api_key.present?
           end
 
@@ -26,9 +24,7 @@ module DiscourseAi
 
         def normalize_model_params(model_params)
           model_params = model_params.dup
-
           model_params[:p] = model_params.delete(:top_p) if model_params[:top_p]
-
           model_params
         end
 

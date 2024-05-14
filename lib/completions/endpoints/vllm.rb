@@ -5,16 +5,8 @@ module DiscourseAi
     module Endpoints
       class Vllm < Base
         class << self
-          def can_contact?(endpoint_name, model_name)
-            endpoint_name == "vllm" &&
-              %w[
-                mistralai/Mixtral-8x7B-Instruct-v0.1
-                mistralai/Mistral-7B-Instruct-v0.2
-                StableBeluga2
-                Upstage-Llama-2-*-instruct-v2
-                Llama2-*-chat-hf
-                Llama2-chat-hf
-              ].include?(model_name)
+          def can_contact?(endpoint_name)
+            endpoint_name == "vllm"
           end
 
           def dependant_setting_names
@@ -54,9 +46,9 @@ module DiscourseAi
         def model_uri
           service = DiscourseAi::Utils::DnsSrv.lookup(SiteSetting.ai_vllm_endpoint_srv)
           if service.present?
-            api_endpoint = "https://#{service.target}:#{service.port}/v1/completions"
+            api_endpoint = "https://#{service.target}:#{service.port}/v1/chat/completions"
           else
-            api_endpoint = "#{SiteSetting.ai_vllm_endpoint}/v1/completions"
+            api_endpoint = "#{SiteSetting.ai_vllm_endpoint}/v1/chat/completions"
           end
           @uri ||= URI(api_endpoint)
         end
@@ -64,7 +56,7 @@ module DiscourseAi
         def prepare_payload(prompt, model_params, _dialect)
           default_options
             .merge(model_params)
-            .merge(prompt: prompt)
+            .merge(messages: prompt)
             .tap { |payload| payload[:stream] = true if @streaming_mode }
         end
 
@@ -76,15 +68,6 @@ module DiscourseAi
           Net::HTTP::Post.new(model_uri, headers).tap { |r| r.body = payload }
         end
 
-        def extract_completion_from(response_raw)
-          parsed = JSON.parse(response_raw, symbolize_names: true).dig(:choices, 0)
-
-          # half a line sent here
-          return if !parsed
-
-          parsed.dig(:text)
-        end
-
         def partials_from(decoded_chunk)
           decoded_chunk
             .split("\n")
@@ -93,6 +76,16 @@ module DiscourseAi
               data == "[DONE]" ? nil : data
             end
             .compact
+        end
+
+        def extract_completion_from(response_raw)
+          parsed = JSON.parse(response_raw, symbolize_names: true).dig(:choices, 0)
+          # half a line sent here
+          return if !parsed
+
+          response_h = @streaming_mode ? parsed.dig(:delta) : parsed.dig(:message)
+
+          response_h.dig(:content)
         end
       end
     end
